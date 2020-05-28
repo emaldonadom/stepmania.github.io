@@ -1,1 +1,189 @@
-Hola mundo
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Stepmania</title>
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<style>
+
+		</style>
+        <script id="vertexShader" type="x-shader/x-vertex">
+
+            varying vec2 vUv;
+
+            void main() {
+
+                vUv = uv;
+
+                gl_Position = vec4( position, 1.0 );
+
+            }
+
+        </script>
+
+        <script id="fragmentShader" type="x-shader/x-fragment">
+
+            uniform sampler2D tAudioData;
+            varying vec2 vUv;
+
+            void main() {
+
+                vec3 backgroundColor = vec3( 0.500, 0.125, 0.125 );
+                vec3 color = vec3( 0.0, 5.0, 0.0 );
+
+                float f = texture2D( tAudioData, vec2( vUv.x, 0.0 ) ).r;
+
+                float i = step( vUv.y, f ) * step( f - 0.0125, vUv.y );
+
+                gl_FragColor = vec4( mix( backgroundColor, color, i ), 1.0 );
+
+            }
+
+        </script>
+	</head>
+	<body>
+        <div id="overlay">
+            <div>
+                <button id="startButton">Jugar</button>
+            </div>
+        </div>
+        <div id="container"></div>
+        <div id="info">
+            <a href="https://threejs.org" target="_blank" rel="noopener noreferrer">three.js</a> webaudio - visualizer<br/>
+            music by <a href="#" target="_blank" rel="noopener">_</a>
+        </div>
+
+		<script src="js/three.js"></script>
+        <script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
+        <script>
+            var scene, camera, renderer, analyser, uniforms;
+
+            var startButton = document.getElementById( 'startButton' );
+            startButton.addEventListener( 'click', init );
+            // Execute a function when the user releases a key on the keyboard
+            document.addEventListener("keyup", function(event) {
+              // Number 13 is the "Enter" key on the keyboard
+              if (event.keyCode === 13) {
+                // Cancel the default action, if needed
+                event.preventDefault();
+                // Trigger the button element with a click
+                startButton.click();
+              }
+            });
+
+            function init() {
+
+                var fftSize = 128;
+                var song = null;
+
+                var preguntar = true;
+                while(preguntar){
+                    var opcion = prompt("1 = Mastodon - Naked burn\n2 = Gorillaz - Clint Eastwood");
+                    if (opcion == "1") {
+                        song = "song";
+                        preguntar = false;
+                    }
+                    else
+                    {
+                        if (opcion == "2") {
+                            song = "gorillaz";
+                            preguntar = false;
+                        }
+                        else
+                        {
+                            preguntar = true;
+                        }
+                    }
+                }
+
+                //
+
+                var overlay = document.getElementById( 'overlay' );
+                overlay.remove();
+
+                //
+
+                var container = document.getElementById( 'container' );
+
+                renderer = new THREE.WebGLRenderer( { antialias: true } );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setClearColor( 0x000000 );
+                renderer.setPixelRatio( window.devicePixelRatio );
+                container.appendChild( renderer.domElement );
+
+                scene = new THREE.Scene();
+
+                camera = new THREE.Camera();
+
+                //
+
+                var listener = new THREE.AudioListener();
+
+                var audio = new THREE.Audio( listener );
+
+                var mediaElement = new Audio( 'sounds/'+song+'.mp3' );
+                mediaElement.loop = true;
+                mediaElement.play();
+//              mediaElement.pause();
+
+                audio.setMediaElementSource( mediaElement );
+
+                analyser = new THREE.AudioAnalyser( audio, fftSize );
+
+                //
+
+                uniforms = {
+
+                    tAudioData: { value: new THREE.DataTexture( analyser.data, fftSize / 2, 1, THREE.LuminanceFormat ) }
+
+                };
+
+                var material = new THREE.ShaderMaterial( {
+
+                    uniforms: uniforms,
+                    vertexShader: document.getElementById( 'vertexShader' ).textContent,
+                    fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+
+                } );
+
+                //1.8 se hace mas ancha la geometria
+                var geometry = new THREE.PlaneBufferGeometry( 1.8, 1 );
+
+                var mesh = new THREE.Mesh( geometry, material );
+                scene.add( mesh );
+
+                //
+
+                window.addEventListener( 'resize', onResize, false );
+
+                animate();
+
+            }
+
+            function onResize() {
+
+                renderer.setSize( window.innerWidth, window.innerHeight );
+
+            }
+
+            function animate() {
+
+                requestAnimationFrame( animate );
+
+                render();
+
+            }
+
+            function render() {
+
+                analyser.getFrequencyData();
+
+                uniforms.tAudioData.value.needsUpdate = true;
+
+                renderer.render( scene, camera );
+
+            }
+            
+		</script>
+	</body>
+</html>
